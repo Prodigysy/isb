@@ -1,0 +1,5 @@
+{
+    "input_file": "lab_1/part2/cod3.txt",
+    "output_file": "lab_1/part2/decrypted_text.txt",
+    "key": "lab_1/part2/key_2.json"
+}
