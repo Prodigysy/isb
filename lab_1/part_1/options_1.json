@@ -1,0 +1,6 @@
+{
+    "shift": 3,
+    "key": "lab_1/part_1/key_1.json",
+    "input": "lab_1/part_1/original_text.txt",
+    "output": "lab_1/part_1/crypted_text.txt"
+}
