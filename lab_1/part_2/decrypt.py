@@ -20,6 +20,12 @@ def decode_text(input_path: str, output_path: str, key_path: str) -> None:
     """
     
     try:
+        
+        if not os.path.exists(key_path):
+            raise FileNotFoundError(f"Key file '{key_path}' not found")
+        if not os.access(key_path, os.R_OK):
+            raise PermissionError(f"No read permission for key file '{key_path}'")
+        
         with open(input_path, 'r', encoding='utf-8') as file:
             encoded_text = file.read()
         
@@ -37,6 +43,8 @@ def decode_text(input_path: str, output_path: str, key_path: str) -> None:
         logging.error(f"File not found: {e.filename}")
     except json.JSONDecodeError as e:
         logging.error(f"Error decoding JSON in key file: {e}")
+    except PermissionError as e:
+        logging.error(f"Permission error: {e}")
     except Exception as e:
         logging.error(f"An unexpected error occurred during file processing: {e}")
 
