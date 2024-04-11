@@ -20,6 +20,10 @@ def decode_text(input_path: str, output_path: str, key_path: str) -> None:
     """
     
     try:
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(f"Input file '{input_path}' not found")
+        if not os.access(input_path, os.R_OK):
+            raise PermissionError(f"No read permission for input file '{input_path}'")
         
         if not os.path.exists(key_path):
             raise FileNotFoundError(f"Key file '{key_path}' not found")
