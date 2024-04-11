@@ -53,8 +53,3 @@ def decode_text(input_path: str, output_path: str, key_path: str) -> None:
         logging.error(f"An unexpected error occurred during file processing: {e}")
 
 
-if __name__ == '__main__':
-    with open(os.path.join("lab_1", "part_2", "options_2.json"), 'r', encoding='utf-8') as json_file:
-        config_params = json.load(json_file)
-    
-    decode_text(config_params["input_file"], config_params["output_file"], config_params["key"])
