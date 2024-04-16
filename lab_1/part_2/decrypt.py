@@ -1,5 +1,4 @@
 import os
-import json
 import logging
 from file_utils import read_text_file, write_text_file, read_json_file
 
