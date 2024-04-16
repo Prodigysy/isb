@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from file_utils import read_text_file, write_text_file, read_json_file
 
 
 logging.basicConfig(level=logging.INFO)
@@ -20,41 +21,22 @@ def decode_text(input_path: str, output_path: str, key_path: str) -> None:
     """
     
     try:
-        if not os.path.exists(input_path):
-            raise FileNotFoundError(f"Input file '{input_path}' not found")
-        if not os.access(input_path, os.R_OK):
-            raise PermissionError(f"No read permission for input file '{input_path}'")
-        
-        if not os.path.exists(key_path):
-            raise FileNotFoundError(f"Key file '{key_path}' not found")
-        if not os.access(key_path, os.R_OK):
-            raise PermissionError(f"No read permission for key file '{key_path}'")
-        
-        with open(input_path, 'r', encoding='utf-8') as file:
-            encoded_text = file.read()
-        
-        with open(key_path, 'r', encoding='utf-8') as key_file:
-            key_mapping = json.load(key_file)
+        encoded_text = read_text_file(input_path)
+        key_mapping = read_json_file(key_path)
 
         decoded_text = encoded_text
         for encoded_char, decoded_char in key_mapping.items():
             decoded_text = decoded_text.replace(decoded_char, encoded_char)
 
-        with open(output_path, 'w', encoding='utf-8') as file:
-            file.write(decoded_text)
+        write_text_file(output_path, decoded_text)
 
-    except FileNotFoundError as e:
-        logging.error(f"File not found: {e.filename}")
-    except json.JSONDecodeError as e:
-        logging.error(f"Error decoding JSON in key file: {e}")
-    except PermissionError as e:
-        logging.error(f"Permission error: {e}")
     except Exception as e:
         logging.error(f"An unexpected error occurred during file processing: {e}")
 
 
 if __name__ == '__main__':
-    with open(os.path.join("lab_1", "part_2", "options_2.json"), 'r', encoding='utf-8') as json_file:
-        config_params = json.load(json_file)
-    
-    decode_text(config_params["input_file"], config_params["output_file"], config_params["key"])
+    try:
+        config_params = read_json_file(os.path.join("lab_1", "part_2", "options_2.json"))
+        decode_text(config_params["input_file"], config_params["output_file"], config_params["key"])
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
