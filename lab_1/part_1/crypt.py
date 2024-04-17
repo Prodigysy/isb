@@ -56,13 +56,13 @@ def check_file_access(file_path: str, mode: str) -> None:
 def caesar_cipher_encoder(input_path: str, output_path: str, shift: int, key_path: str, mode: CipherMode) -> None:
     """
     Encrypts or decrypts the contents of the input file using a Caesar cipher with a specified shift value,
-    then saves the result to an output file and the encoding key to a JSON file.
+    then saves the result to an output file and the encoding key (shift) to a JSON file.
 
     Args:
         input_path (str): The path to the input file containing the text to be processed.
         output_path (str): The path to the output file where the processed text will be saved.
         shift (int): The number of positions to shift each alphabetic character in the text.
-        key_path (str): The path to the output file where the encoding key will be saved in JSON format.
+        key_path (str): The path to the output file where the encoding key (shift) will be saved in JSON format.
         mode (CipherMode): The mode of operation (encrypt or decrypt).
 
     Returns:
@@ -78,6 +78,8 @@ def caesar_cipher_encoder(input_path: str, output_path: str, shift: int, key_pat
                 check_file_access(input_path, 'r')
                 check_file_access(os.path.dirname(output_path), 'w')
                 check_file_access(os.path.dirname(key_path), 'w')
+                
+                processed_text = caesar_cipher(text, shift, CipherMode.ENCRYPT)
 
             case CipherMode.DECRYPT:
                 if not 1 <= shift <= 25:
@@ -86,27 +88,17 @@ def caesar_cipher_encoder(input_path: str, output_path: str, shift: int, key_pat
                 check_file_access(input_path, 'r')
                 check_file_access(os.path.dirname(output_path), 'w')
                 check_file_access(os.path.dirname(key_path), 'w')
+                
+                processed_text = caesar_cipher(text, shift, CipherMode.DECRYPT)
 
         with open(input_path, 'r', encoding='utf-8') as file:
             text = file.read()
 
-        if mode == CipherMode.ENCRYPT:
-            processed_text = caesar_cipher(text, shift, CipherMode.ENCRYPT)
-        elif mode == CipherMode.DECRYPT:
-            processed_text = caesar_cipher(text, shift, CipherMode.DECRYPT)
-        else:
-            raise ValueError("Invalid mode. Mode must be 'encrypt' or 'decrypt'.")
-
         with open(output_path, 'w', encoding='utf-8') as file:
             file.write(processed_text)
 
-        if mode == CipherMode.ENCRYPT:
-            encoding_dict = {char: caesar_cipher(char, shift, CipherMode.ENCRYPT) for char in text}
-        else:
-            encoding_dict = {caesar_cipher(char, shift, CipherMode.ENCRYPT): char for char in text}
-
         with open(key_path, 'w', encoding='utf-8') as json_file:
-            json.dump(encoding_dict, json_file, ensure_ascii=False)
+            json.dump({"shift": shift}, json_file, ensure_ascii=False)
 
     except ValueError as ve:
         logging.error(f"Invalid value: {str(ve)}")
