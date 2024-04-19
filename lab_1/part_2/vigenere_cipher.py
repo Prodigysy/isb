@@ -108,10 +108,11 @@ def process_texts(file_path, action, keys):
             zip_file.writestr(f"{action}_text_{i+1}.txt", processed_text)
 
 
-file_path = "C:\\Users\\user\\Desktop\\isb-main\\isb\\lab_1\\part_2\\master_i_margarita.txt"
-keys = [generate_random_key(random.randint(5, 10)) for _ in range(100)]
-decrypt_keys = [generate_random_key(random.randint(5, 10)) for _ in range(100)]
+if __name__ == "__main__":
+    file_path = "C:\\Users\\user\\Desktop\\isb-main\\isb\\lab_1\\part_2\\master_i_margarita.txt"
+    keys = [generate_random_key(random.randint(5, 10)) for _ in range(100)]
+    decrypt_keys = [generate_random_key(random.randint(5, 10)) for _ in range(100)]
 
-process_texts(file_path, 'encrypt', keys)
-save_keys_to_json(keys, decrypt_keys, "keys.json")
-process_texts(file_path, 'decrypt', decrypt_keys)
+    process_texts(file_path, 'encrypt', keys)
+    save_keys_to_json(keys, decrypt_keys, "keys.json")
+    process_texts(file_path, 'decrypt', decrypt_keys)
