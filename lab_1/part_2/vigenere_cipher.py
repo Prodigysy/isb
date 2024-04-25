@@ -1,7 +1,22 @@
 import random
+import os
 import json
 import zipfile
+import logging
+
+from typing import List
 from pathlib import Path
+from enum import Enum
+
+
+logging.basicConfig(level=logging.INFO)
+
+
+ALPHABET = 'абвгдежзийклмнопрстуфхцчшщъыьэюя0123456789!:;'
+
+class CipherMode(Enum):
+    ENCRYPT = 'encrypt'
+    DECRYPT = 'decrypt'
 
 
 def generate_random_key(length):
@@ -14,8 +29,7 @@ def generate_random_key(length):
     Returns:
         str: The generated key.
     """
-    all_characters = 'абвгдежзийклмнопрстуфхцчшщъыьэюя0123456789!:;'
-    shuffled_characters = random.sample(all_characters, len(all_characters))
+    shuffled_characters = random.sample(ALPHABET, len(ALPHABET))
     return ''.join(shuffled_characters[:length])
 
 
@@ -33,18 +47,21 @@ def save_keys_to_json(keys, decrypt_keys, filename):
     """
     key_dict = {keys[i]: decrypt_keys[i] for i in range(len(keys))}
     filepath = Path(filename)
-    with filepath.open('w', encoding='utf-8') as file:
-        json.dump(key_dict, file, ensure_ascii=False)
+    try:
+        with filepath.open('w', encoding='utf-8') as file:
+            json.dump(key_dict, file, ensure_ascii=False)
+    except Exception as e:
+        logging.error(f"An error occurred while saving the keys to JSON file: {e}")
 
 
-def vigenere_cipher(text, key, mode):
+def vigenere_cipher(text, key, mode: CipherMode):
     """
     Encrypts or decrypts text using the Vigenere cipher.
 
     Args:
         text (str): The original text.
         key (str): The encryption or decryption key.
-        mode (str): The mode, 'encrypt' for encryption or 'decrypt' for decryption.
+        mode (CipherMode): The mode, CipherMode.ENCRYPT for encryption or CipherMode.DECRYPT for decryption.
 
     Returns:
         str: The encrypted or decrypted text.
@@ -52,16 +69,28 @@ def vigenere_cipher(text, key, mode):
     result = ""
     key_index = 0
     for char in text:
-        if char.isalpha():
-            shift = ord(key[key_index % len(key)]) - ord('а')
-            if mode == 'decrypt':
-                shift = -shift
-            shifted_char = chr((ord(char) - ord('а') + shift) % 32 + ord('а'))
-            result += shifted_char
-            key_index += 1
-        else:
-            result += char
+        case = mode
+        shift = ord(key[key_index % len(key)]) - ord('а')
+        match case:
+            case CipherMode.ENCRYPT:
+                if char.isalpha():
+                    shifted_char = chr((ord(char) - ord('а') + shift) % 32 + ord('а'))
+                else:
+                    shifted_char = char
+                result += shifted_char
+                key_index += 1
+            case CipherMode.DECRYPT:
+                if char.isalpha():
+                    shift = -shift
+                    shifted_char = chr((ord(char) - ord('а') + shift) % 32 + ord('а'))
+                else:
+                    shifted_char = char
+                result += shifted_char
+                key_index += 1
+            case _:
+                result += char
     return result
+
 
 
 def get_random_text_excerpt(file_path, num_sentences=5):
@@ -75,12 +104,16 @@ def get_random_text_excerpt(file_path, num_sentences=5):
     Returns:
         str: The random text excerpt.
     """
-    with open(file_path, 'r', encoding='utf-8') as file:
-        all_text = file.read()
-        sentences = all_text.split('.')
-        start_index = random.randint(0, len(sentences) - num_sentences)
-        excerpt = '. '.join(sentences[start_index:start_index + num_sentences]) + '.'
-        return excerpt
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            all_text = file.read()
+            sentences = all_text.split('.')
+            start_index = random.randint(0, len(sentences) - num_sentences)
+            excerpt = '. '.join(sentences[start_index:start_index + num_sentences]) + '.'
+    except FileNotFoundError:
+        logging.error(f"File {file_path} not found.")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
 
 
 def process_texts(file_path, action, keys):
@@ -89,30 +122,46 @@ def process_texts(file_path, action, keys):
 
     Args:
         file_path (str): The path to the text file.
-        action (str): The action, 'encrypt' for encryption or 'decrypt' for decryption.
+        action (CipherMode): The action, CipherMode.ENCRYPT for encryption or CipherMode.DECRYPT for decryption.
         keys (list): The list of keys.
 
     Returns:
         None
     """
-    with zipfile.ZipFile("encrypted_texts_and_keys.zip", "w") as zip_file:
-        for i in range(100):
-            text_excerpt = get_random_text_excerpt(file_path)
+    with open('settings.json', 'r') as settings_file:
+        settings = json.load(settings_file)
+        zip_filename = settings.get('zip_filename', 'encrypted_texts_and_keys.zip')
+        num_texts = settings.get('num_texts', 100)
+        num_sentences = settings.get('num_sentences', 5)
 
-            if action == 'encrypt':
-                processed_text = vigenere_cipher(text_excerpt, keys[i], 'encrypt')
-            elif action == 'decrypt':
-                processed_text = vigenere_cipher(text_excerpt, keys[i], 'decrypt')
+    try:
+        with zipfile.ZipFile(zip_filename, "w") as zip_file:
+            for i in range(num_texts):
+                text_excerpt = get_random_text_excerpt(file_path, num_sentences)
 
-            zip_file.writestr(f"original_text_{i+1}.txt", text_excerpt)
-            zip_file.writestr(f"{action}_text_{i+1}.txt", processed_text)
+                processed_text = vigenere_cipher(text_excerpt, keys[i], action)
+
+                zip_file.writestr(f"original_text_{i+1}.txt", text_excerpt)
+                zip_file.writestr(f"{action.value}_text_{i+1}.txt", processed_text)
+    except Exception as e:
+        logging.error(f"An error occurred while processing texts: {e}")
+
 
 
 if __name__ == "__main__":
-    file_path = "C:\\Users\\user\\Desktop\\isb-main\\isb\\lab_1\\part_2\\master_i_margarita.txt"
-    keys = [generate_random_key(random.randint(5, 10)) for _ in range(100)]
-    decrypt_keys = [generate_random_key(random.randint(5, 10)) for _ in range(100)]
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_directory, "master_i_margarita.txt")
 
-    process_texts(file_path, 'encrypt', keys)
+    with open("settings.json", "r") as settings_file:
+        settings = json.load(settings_file)
+        num_keys = settings.get("num_keys", 100)
+        min_key_length = settings.get("min_key_length", 5)
+        max_key_length = settings.get("max_key_length", 10)
+
+    keys = [generate_random_key(random.randint(min_key_length, max_key_length)) for _ in range(num_keys)]
+    decrypt_keys = [generate_random_key(random.randint(min_key_length, max_key_length)) for _ in range(num_keys)]
+
+    process_texts(file_path, CipherMode.ENCRYPT, keys)
     save_keys_to_json(keys, decrypt_keys, "keys.json")
-    process_texts(file_path, 'decrypt', decrypt_keys)
+    process_texts(file_path, CipherMode.DECRYPT, decrypt_keys)
+

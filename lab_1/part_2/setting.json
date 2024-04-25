@@ -1,0 +1,8 @@
+{
+    "zip_filename": "encrypted_texts_and_keys.zip",
+    "num_texts": 100,
+    "num_sentences": 5,
+    "num_keys": 100,
+    "min_key_length": 5,
+    "max_key_length": 10
+}
