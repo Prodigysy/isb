@@ -4,7 +4,6 @@ import json
 import zipfile
 import logging
 
-from typing import List
 from pathlib import Path
 from enum import Enum
 
@@ -13,6 +12,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 ALPHABET = 'абвгдежзийклмнопрстуфхцчшщъыьэюя0123456789!:;'
+
 
 class CipherMode(Enum):
     ENCRYPT = 'encrypt'
@@ -92,7 +92,6 @@ def vigenere_cipher(text, key, mode: CipherMode):
     return result
 
 
-
 def get_random_text_excerpt(file_path, num_sentences=5):
     """
     Retrieves a random excerpt from a file with a specified number of sentences.
@@ -147,7 +146,6 @@ def process_texts(file_path, action, keys):
         logging.error(f"An error occurred while processing texts: {e}")
 
 
-
 if __name__ == "__main__":
     current_directory = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(current_directory, "master_i_margarita.txt")
@@ -164,4 +162,3 @@ if __name__ == "__main__":
     process_texts(file_path, CipherMode.ENCRYPT, keys)
     save_keys_to_json(keys, decrypt_keys, "keys.json")
     process_texts(file_path, CipherMode.DECRYPT, decrypt_keys)
-
