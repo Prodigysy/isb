@@ -7,7 +7,6 @@ import logging
 from pathlib import Path
 from enum import Enum
 
-
 logging.basicConfig(level=logging.INFO)
 
 
@@ -115,7 +114,7 @@ def get_random_text_excerpt(file_path, num_sentences=5):
         logging.error(f"An error occurred: {e}")
 
 
-def process_texts(file_path, action, keys):
+def process_texts(file_path, action, keys, zip_filename="encrypted_texts_and_keys.zip", num_texts=100, num_sentences=5):
     """
     Processes texts with the specified action (encryption or decryption).
 
@@ -123,23 +122,18 @@ def process_texts(file_path, action, keys):
         file_path (str): The path to the text file.
         action (CipherMode): The action, CipherMode.ENCRYPT for encryption or CipherMode.DECRYPT for decryption.
         keys (list): The list of keys.
+        zip_filename (str): The name of the ZIP file to store the processed texts and keys.
+        num_texts (int): The number of texts to process.
+        num_sentences (int): The number of sentences in each text excerpt.
 
     Returns:
         None
     """
-    with open('settings.json', 'r') as settings_file:
-        settings = json.load(settings_file)
-        zip_filename = settings.get('zip_filename', 'encrypted_texts_and_keys.zip')
-        num_texts = settings.get('num_texts', 100)
-        num_sentences = settings.get('num_sentences', 5)
-
     try:
         with zipfile.ZipFile(zip_filename, "w") as zip_file:
             for i in range(num_texts):
                 text_excerpt = get_random_text_excerpt(file_path, num_sentences)
-
                 processed_text = vigenere_cipher(text_excerpt, keys[i], action)
-
                 zip_file.writestr(f"original_text_{i+1}.txt", text_excerpt)
                 zip_file.writestr(f"{action.value}_text_{i+1}.txt", processed_text)
     except Exception as e:
@@ -150,15 +144,30 @@ if __name__ == "__main__":
     current_directory = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(current_directory, "master_i_margarita.txt")
 
-    with open("settings.json", "r") as settings_file:
-        settings = json.load(settings_file)
-        num_keys = settings.get("num_keys", 100)
-        min_key_length = settings.get("min_key_length", 5)
-        max_key_length = settings.get("max_key_length", 10)
+    try:
+        with open("settings.json", "r") as settings_file:
+            settings = json.load(settings_file)
+            num_keys = settings.get("num_keys")
+            min_key_length = settings.get("min_key_length")
+            max_key_length = settings.get("max_key_length")
+            zip_filename = settings.get("zip_filename")
+            num_texts = settings.get("num_texts")
+            num_sentences = settings.get("num_sentences")
+
+    except FileNotFoundError as fnf_err:
+        logging.error(f"Settings file not found: {fnf_err}")
+        exit(1)
+    except json.JSONDecodeError as json_err:
+        logging.error(f"Error decoding JSON settings: {json_err}")
+        exit(1)
+    except Exception as e:
+        logging.error(f"An unexpected error occurred while reading settings: {e}")
+        exit(1)
+
 
     keys = [generate_random_key(random.randint(min_key_length, max_key_length)) for _ in range(num_keys)]
     decrypt_keys = [generate_random_key(random.randint(min_key_length, max_key_length)) for _ in range(num_keys)]
 
-    process_texts(file_path, CipherMode.ENCRYPT, keys)
+    process_texts(file_path, CipherMode.ENCRYPT, keys, zip_filename, num_texts, num_sentences)
     save_keys_to_json(keys, decrypt_keys, "keys.json")
-    process_texts(file_path, CipherMode.DECRYPT, decrypt_keys)
+    process_texts(file_path, CipherMode.DECRYPT, decrypt_keys, zip_filename, num_texts, num_sentences)

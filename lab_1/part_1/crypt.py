@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+
 from enum import Enum
 
 logging.basicConfig(level=logging.INFO)
@@ -70,29 +71,22 @@ def caesar_cipher_encoder(input_path: str, output_path: str, shift: int, key_pat
     """
 
     try:
-        match mode:
-            case CipherMode.ENCRYPT:
-                if not 1 <= shift <= 25:
-                    raise ValueError("Shift must be in the range from 1 to 25")
+        if not 1 <= shift <= 25:
+            raise ValueError("Shift must be in the range from 1 to 25")
 
-                check_file_access(input_path, 'r')
-                check_file_access(os.path.dirname(output_path), 'w')
-                check_file_access(os.path.dirname(key_path), 'w')
-                
-                processed_text = caesar_cipher(text, shift, CipherMode.ENCRYPT)
-
-            case CipherMode.DECRYPT:
-                if not 1 <= shift <= 25:
-                    raise ValueError("Shift must be in the range from 1 to 25")
-
-                check_file_access(input_path, 'r')
-                check_file_access(os.path.dirname(output_path), 'w')
-                check_file_access(os.path.dirname(key_path), 'w')
-                
-                processed_text = caesar_cipher(text, shift, CipherMode.DECRYPT)
+        check_file_access(input_path, 'r')
+        check_file_access(os.path.dirname(output_path), 'w')
+        check_file_access(os.path.dirname(key_path), 'w')
 
         with open(input_path, 'r', encoding='utf-8') as file:
             text = file.read()
+
+        match mode:
+            case CipherMode.ENCRYPT:
+                processed_text = caesar_cipher(text, shift, CipherMode.ENCRYPT)
+
+            case CipherMode.DECRYPT:
+                processed_text = caesar_cipher(text, shift, CipherMode.DECRYPT)
 
         with open(output_path, 'w', encoding='utf-8') as file:
             file.write(processed_text)
@@ -106,6 +100,7 @@ def caesar_cipher_encoder(input_path: str, output_path: str, shift: int, key_pat
         logging.error(str(fe))
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")
+
 
 
 if __name__ == '__main__':
