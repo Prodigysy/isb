@@ -75,20 +75,25 @@ def longest_run_test(bitstring:str) -> float:
 
         max_run_lengths = [max(len(run) for run in block.split('0')) for block in [bitstring[i:i+M] for i in range(0, N, M)]]
 
-        v1 = sum(1 for length in max_run_lengths if length <= 1)
-        v2 = sum(1 for length in max_run_lengths if length == 2)
-        v3 = sum(1 for length in max_run_lengths if length == 3)
-        v4 = sum(1 for length in max_run_lengths if length >= 4)
-        V = [v1, v2, v3, v4]
+        V = [0, 0, 0, 0]
+        for length in max_run_lengths:
+            match length:
+                case 0 | 1:
+                    V[0] += 1
+                case 2:
+                    V[1] += 1
+                case 3:
+                    V[2] += 1
+                case length if length >= 4:
+                    V[3] += 1
 
-        x_square = 0
-        for i in range(4):
-            x_square += pow(V[i] - 16 * pi[i], 2) / (16 * pi[i])
+        x_square = sum(pow(V[i] - 16 * pi[i], 2) / (16 * pi[i]) for i in range(4))
         p_value = mpmath.gammainc(3/2, x_square/2)
 
         return p_value
     except Exception as ex:
-            logging.error(f"Error occurred during the test execution: {ex.message}\n{ex.args}\n")
+        logging.error(f"Error occurred during the test execution: {ex}\n")
+
             
 
 def read_sequence_from_file(file_name):
