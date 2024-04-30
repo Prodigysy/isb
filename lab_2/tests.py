@@ -97,33 +97,26 @@ def save_results(results, output_path):
 if __name__ == "__main__":
     try:
         with open(os.path.join("lab_2", "settings.json"), "r") as paths_file:
-            paths = json.load(paths_file)
-        
-        cpp_sequence = read_sequence_from_file(paths["cpp_path"])
-        java_sequence = read_sequence_from_file(paths["java_path"])
+            path = json.load(paths_file)
+        path1 = path['path_input']
+        path2 = path['path_output']
 
-        p_value_frequency_cpp = frequency_test(cpp_sequence)
-        p_value_runs_cpp = runs_test(cpp_sequence)
-        p_value_longest_run_cpp = longest_run_test(cpp_sequence)
+        with open(path1 , "r") as sequences:
+            sequence = json.load(sequences)
 
-        p_value_frequency_java = frequency_test(java_sequence)
-        p_value_runs_java = runs_test(java_sequence)
-        p_value_longest_run_java = longest_run_test(java_sequence)
+        cpp_sequence = sequence['cpp']
+        java_sequence = sequence['java']
 
-        results = {
-            "cpp": {
-                "frequency_test": p_value_frequency_cpp,
-                "runs_test": p_value_runs_cpp,
-                "longest_run_test": p_value_longest_run_cpp
-            },
-            "java": {
-                "frequency_test": p_value_frequency_java,
-                "runs_test": p_value_runs_java,
-                "longest_run_test": p_value_longest_run_java
-            }
-        }
-        save_results(results, paths["output_path"])
-    
+        with open(path2, 'w') as sequences:
+            sequences.write("Results(C++)\n")
+            sequences.write(str(frequency_test(cpp_sequence)) + '\n')
+            sequences.write(str(runs_test(cpp_sequence)) + '\n')
+            sequences.write(str(longest_run_test(cpp_sequence)) + '\n')
+
+            sequences.write("\nResults(Java)\n")
+            sequences.write(str(frequency_test(java_sequence)) + '\n')
+            sequences.write(str(runs_test(java_sequence)) + '\n')
+            sequences.write(str(longest_run_test(java_sequence)) + '\n')
     except FileNotFoundError as e:
         logging.error(f"File not found: {e.filename}")
     except json.JSONDecodeError as e:
