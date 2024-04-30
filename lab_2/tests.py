@@ -1,11 +1,13 @@
 import json
 import logging
 import os
+import mpmath
 
 from math import erfc, fabs, pow, sqrt
 
 logging.basicConfig(level=logging.INFO)
 
+pi = [0.2148, 0.3672, 0.2305, 0.1875]
 SEQUENCE_LENGTH = 128
 BLOCK_SIZE = 6
 
@@ -59,29 +61,35 @@ def runs_test(sequence):
         logging.error(f"Error occurred during the test execution: {ex}\n")
 
 
-def longest_run_test(sequence):
+def longest_run_test(bitstring:str) -> float:
     """
-    Longest Run Test: This test identifies the longest run of ones in the sequence.
-
+    Performs the longest run of ones test for the given bit sequence.
     Parameters:
-    sequence (str): The binary sequence to be tested.
-
+    bitstring (str): The bit sequence to be tested.
     Returns:
-    float: The p-value for the longest run test.
+    float: The p-value indicating the degree of randomness in the distribution of longest runs of ones.
     """
     try:
-        blocks = [sequence[i:i+BLOCK_SIZE] for i in range(0, len(sequence), BLOCK_SIZE)]
-        lengths = [block.count('1') for block in blocks]
-        m = max(lengths)
-        n = len(sequence)
-        nu = (n - BLOCK_SIZE + 3) / 2 ** BLOCK_SIZE
-        sigma = (16 * 105 + 16 * 2 ** 4) / 2 ** 9
-        p_value = erfc(abs(m - nu) / (2 ** 0.5 * sigma))
+        N = len(bitstring)
+        M = 8
+
+        max_run_lengths = [max(len(run) for run in block.split('0')) for block in [bitstring[i:i+M] for i in range(0, N, M)]]
+
+        v1 = sum(1 for length in max_run_lengths if length <= 1)
+        v2 = sum(1 for length in max_run_lengths if length == 2)
+        v3 = sum(1 for length in max_run_lengths if length == 3)
+        v4 = sum(1 for length in max_run_lengths if length >= 4)
+        V = [v1, v2, v3, v4]
+
+        x_square = 0
+        for i in range(4):
+            x_square += pow(V[i] - 16 * pi[i], 2) / (16 * pi[i])
+        p_value = mpmath.gammainc(3/2, x_square/2)
+
         return p_value
     except Exception as ex:
-        logging.error(f"Error occurred during the test execution: {ex}\n")
-
-
+            logging.error(f"Error occurred during the test execution: {ex.message}\n{ex.args}\n")
+            
 
 def read_sequence_from_file(file_name):
 
