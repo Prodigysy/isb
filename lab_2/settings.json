@@ -1,0 +1,5 @@
+{
+    "path_input":"lab_2/results.json",
+    "path_output":"lab_2/result_of_tests.txt",
+    "output_path": "lab_2/result_of_tests.json"
+}
