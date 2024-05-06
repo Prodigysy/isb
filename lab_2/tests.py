@@ -1,135 +1,127 @@
 import json
 import logging
+import math
 import os
-import mpmath
-
-from math import erfc, fabs, pow, sqrt
+from math import erfc, fabs, sqrt
 
 logging.basicConfig(level=logging.INFO)
 
-pi = [0.2148, 0.3672, 0.2305, 0.1875]
-SEQUENCE_LENGTH = 128
-BLOCK_SIZE = 6
 
-
-def frequency_test(bitstring:str) -> float:
+def serial_test(bitstring: str) -> float:
     """
-    Calculates the p-value of the frequency (monobit) test for a given bit sequence.
+    Performs the Serial Test for the given bit sequence.
 
-    This test evaluates whether the number of ones and zeros in the sequence is approximately equal,
-    indicating uniform distribution.
-
-    Parameters:
-    bitstring (str): The binary sequence to be tested.
-    """
-    try:
-        N = len(bitstring)
-        sum_values = fabs(sum(1 if bit == '1' else -1 for bit in bitstring))
-        p_value = erfc((sum_values) / sqrt(2*N))
-        return p_value
-    except Exception as ex:
-        logging.error(f"Error occurred during the test execution: {ex}\n")
-
-
-
-def runs_test(sequence):
-    """
-    Performs the runs test for the given binary sequence.
-
-    This test checks for the presence of runs in the sequence, where a run is defined as consecutive
-    bits of the same value.
-
-    Parameters:
-    sequence (str): The binary sequence to be tested.
-
-    Returns:
-    float: The p-value indicating the randomness of the runs in the sequence.
-    """
-    try:
-        n = len(sequence)
-        runs = [sequence[0]]
-        for bit in sequence:
-            if bit != runs[-1]:
-                runs.append(bit)
-        k = len(runs)
-        pi = sequence.count('1') / n
-        tau = 2 / (pi * (1 - pi)) ** 0.5
-        vobs = sum([1 for i in range(1, k - 1) if runs[i - 1] != runs[i + 1]]) + 1
-        p_value = erfc(abs(vobs - 2 * n * pi * (1 - pi)) / (2 * pi * (1 - pi) * (2 * n) ** 0.5))
-        return p_value
-    except Exception as ex:
-        logging.error(f"Error occurred during the test execution: {ex}\n")
-
-
-def longest_run_test(bitstring:str) -> float:
-    """
-    Performs the longest run of ones test for the given bit sequence.
     Parameters:
     bitstring (str): The bit sequence to be tested.
+
     Returns:
-    float: The p-value indicating the degree of randomness in the distribution of longest runs of ones.
+    float: The p-value indicating the degree of correlation in the sequence.
     """
-    try:
-        N = len(bitstring)
-        M = 8
+    ones = bitstring.count('1')
+    zeros = len(bitstring) - ones
+    ones_sequence = zeros_sequence = 0
 
-        max_run_lengths = [max(len(run) for run in block.split('0')) for block in [bitstring[i:i+M] for i in range(0, N, M)]]
+    for i in range(len(bitstring) - 1):
+        if bitstring[i] == '1' and bitstring[i+1] == '1':
+            ones_sequence += 1
+        elif bitstring[i] == '0' and bitstring[i+1] == '0':
+            zeros_sequence += 1
 
-        V = [0, 0, 0, 0]
-        for length in max_run_lengths:
-            match length:
-                case 0 | 1:
-                    V[0] += 1
-                case 2:
-                    V[1] += 1
-                case 3:
-                    V[2] += 1
-                case length if length >= 4:
-                    V[3] += 1
+    p_value = erfc(fabs(ones_sequence - zeros_sequence) / sqrt(2 * ones * zeros))
 
-        x_square = sum(pow(V[i] - 16 * pi[i], 2) / (16 * pi[i]) for i in range(4))
-        p_value = mpmath.gammainc(3/2, x_square/2)
+    return p_value
 
-        return p_value
-    except Exception as ex:
-        logging.error(f"Error occurred during the test execution: {ex}\n")
+def maurers_universal_statistical_test(bitstring: str, L: int, Q: int) -> float:
+    """
+    Performs Maurer’s Universal Statistical Test for the given bit sequence.
 
-            
+    Parameters:
+    bitstring (str): The bit sequence to be tested.
+    L (int): The length of the substrings to be considered.
+    Q (int): The number of substrings to be considered.
 
-def read_sequence_from_file(file_name):
+    Returns:
+    float: The p-value indicating the degree of randomness in the bit sequence.
+    """
+    n = len(bitstring)
+    K = n // Q
 
-    with open(file_name, 'r') as file:
-        sequence = file.read().strip()
-    return sequence
+    if L * Q > n:
+        logging.error("Error: L * Q should be less than or equal to the length of the bit sequence.")
+        return None
 
-def save_results(results, output_path):
-    with open(output_path, "w") as results_file:
-        json.dump(results, results_file, indent=4)
+    blocks = [bitstring[i:i+L] for i in range(0, L * Q, L)]
+    T = [0] * Q
 
+    for i in range(1, min(Q, len(blocks))):
+        seen = set()
+        for j in range(K):
+            idx = i + j * Q
+            if idx < len(blocks):
+                if blocks[idx] not in seen:
+                    T[i] += 1
+                    seen.add(blocks[idx])
+
+    v_obs = sum(T[1:]) / (Q - 1)
+    lambda_val = (v_obs - 0.7) * math.sqrt(Q + 1.4)
+
+    p_value = math.erfc(abs(lambda_val) / math.sqrt(2))
+
+    return p_value
+
+def cumulative_sums_test(bitstring: str) -> float:
+    """
+    Performs the Cumulative Sums Test for the given bit sequence.
+
+    Parameters:
+    bitstring (str): The bit sequence to be tested.
+
+    Returns:
+    float: The p-value indicating the degree of randomness in the cumulative sums.
+    """
+    S = [0]
+    for bit in bitstring:
+        if bit == '1':
+            S.append(S[-1] + 1)
+        else:
+            S.append(S[-1] - 1)
+
+    max_S = max(S)
+    min_S = min(S)
+    z = max(fabs(max_S), fabs(min_S))
+    N = len(bitstring)
+    p_value = erfc(z / sqrt(N * (N + 1) * (2 * N + 1) / 6))
+
+    return p_value
 
 if __name__ == "__main__":
     try:
-        with open(os.path.join("lab_2", "settings.json"), "r") as paths_file:
-            path = json.load(paths_file)
-        path1 = path['path_input']
-        path2 = path['path_output']
+        with open(os.path.join("lab_2", "settings.json"), "r", encoding="utf-8") as paths_file:
+            paths = json.load(paths_file)
 
-        with open(path1 , "r") as sequences:
+        path1 = paths['path_input']
+        path2 = paths['path_output']
+        L = paths.get('L')
+        Q = paths.get('Q')
+
+        with open(path1, "r", encoding="utf-8") as sequences:
             sequence = json.load(sequences)
 
         cpp_sequence = sequence['cpp']
         java_sequence = sequence['java']
 
-        with open(path2, 'w') as sequences:
-            sequences.write("Results(C++)\n")
-            sequences.write(str(frequency_test(cpp_sequence)) + '\n')
-            sequences.write(str(runs_test(cpp_sequence)) + '\n')
-            sequences.write(str(longest_run_test(cpp_sequence)) + '\n')
+        with open(path2, 'w', encoding='utf-8') as out_file:
+            out_file.write("Results (C++)\n")
+            out_file.write("Serial Test: " + str(serial_test(cpp_sequence)) + '\n')
+            out_file.write("Maurer’s Universal Statistical Test: " + str(maurers_universal_statistical_test(cpp_sequence, L, Q)) + '\n')
+            out_file.write("Cumulative Sums Test: " + str(cumulative_sums_test(cpp_sequence)) + '\n\n')
 
-            sequences.write("\nResults(Java)\n")
-            sequences.write(str(frequency_test(java_sequence)) + '\n')
-            sequences.write(str(runs_test(java_sequence)) + '\n')
-            sequences.write(str(longest_run_test(java_sequence)) + '\n')
+            out_file.write("Results (Java)\n")
+            out_file.write("Serial Test: " + str(serial_test(java_sequence)) + '\n')
+            out_file.write("Maurer’s Universal Statistical Test: " + str(maurers_universal_statistical_test(java_sequence, L, Q)) + '\n')
+            out_file.write("Cumulative Sums Test: " + str(cumulative_sums_test(java_sequence)) + '\n\n')
+
+        logging.info("Tests completed successfully.")
     except FileNotFoundError as e:
         logging.error(f"File not found: {e.filename}")
     except json.JSONDecodeError as e:
