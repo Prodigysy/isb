@@ -1,32 +1,24 @@
 #include <iostream>
-#include <random>
-#include <string>
-
-const int SEQUENCE_LENGTH = 128;
+#include <cstdlib>
+#include <ctime>
 
 /**
- * Generates a pseudo-random binary sequence of the specified length.
- * 
- * @return The generated binary sequence as a string of hexadecimal digits.
+ * @brief Generates a pseudo-random 128-bit binary sequence and prints it to the standard output.
+ *
+ * This function initializes the random number generator using the current time and generates
+ * a 128-bit binary sequence, printing it to the standard output.
  */
-std::string generateRandomSequence() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, 255);
+void generateRandomBinarySequence() {
+    std::srand(static_cast<unsigned>(std::time(0)));
 
-    std::string sequence;
-    sequence.reserve(SEQUENCE_LENGTH / 8 * 2); 
-    for (int i = 0; i < SEQUENCE_LENGTH / 8; ++i) {
-        int random_byte = dis(gen);
-        sequence += std::to_string(random_byte);
+    for (int i = 0; i < 128; ++i) {
+        int random_bit = std::rand() % 2;
+        std::cout << random_bit;
     }
-    return sequence;
 }
 
 int main() {
-    std::string randomSequence = generateRandomSequence();
-
-    std::cout << "Random sequence: " << randomSequence << std::endl;
+    generateRandomBinarySequence();
 
     return 0;
 }

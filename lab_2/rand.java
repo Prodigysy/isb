@@ -1,31 +1,27 @@
-#include <iostream>
-#include <random>
-#include <string>
-
-const int SEQUENCE_LENGTH = 128;
+import java.util.Random;
 
 /**
- * Generates a pseudo-random binary sequence of the specified length.
- * 
- * @return The generated binary sequence as a string of binary digits ('0' and '1').
+ * A class for generating a pseudo-random 128-bit binary sequence.
  */
-std::string generateRandomSequence() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, 1);
+public class RandomSequenceGenerator {
 
-    std::string sequence;
-    sequence.reserve(SEQUENCE_LENGTH);
-    for (int i = 0; i < SEQUENCE_LENGTH; ++i) {
-        int random_bit = dis(gen);
-        sequence += std::to_string(random_bit);
+    /**
+     * The main entry point of the program. Generates and prints a 128-bit binary sequence.
+     *
+     * @param args Command line arguments (not used).
+     */
+    public static void main(String[] args) {
+        // Initializing the random number generator using the current time
+        Random random = new Random(System.currentTimeMillis());
+
+        // Generating a 128-bit binary sequence
+        StringBuilder sequence = new StringBuilder();
+        for (int i = 0; i < 128; ++i) {
+            int randomBit = random.nextInt(2);
+            sequence.append(randomBit);
+        }
+
+        // Printing the generated sequence
+        System.out.println(sequence.toString());
     }
-    return sequence;
-}
-
-int main() {
-    std::string randomSequence = generateRandomSequence();
-    std::cout << "Random sequence: " << randomSequence << std::endl;
-
-    return 0;
 }

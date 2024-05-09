@@ -6,7 +6,6 @@ from math import erfc, fabs, sqrt
 
 logging.basicConfig(level=logging.INFO)
 
-
 def serial_test(bitstring: str) -> float:
     """
     Performs the Serial Test for the given bit sequence.
@@ -31,41 +30,32 @@ def serial_test(bitstring: str) -> float:
 
     return p_value
 
-def maurers_universal_statistical_test(bitstring: str, L: int, Q: int) -> float:
+def frequency_test_within_block(bitstring: str, M: int, Q: int) -> float:
     """
-    Performs Maurer’s Universal Statistical Test for the given bit sequence.
+    Performs the Frequency Test within a Block for the given bit sequence.
 
     Parameters:
     bitstring (str): The bit sequence to be tested.
-    L (int): The length of the substrings to be considered.
-    Q (int): The number of substrings to be considered.
+    M (int): The number of blocks.
+    Q (int): The length of each block.
 
     Returns:
     float: The p-value indicating the degree of randomness in the bit sequence.
     """
     n = len(bitstring)
-    K = n // Q
-
-    if L * Q > n:
-        logging.error("Error: L * Q should be less than or equal to the length of the bit sequence.")
+    if n < M * Q:
+        logging.error("Error: M * Q should be less than or equal to the length of the bit sequence.")
         return None
 
-    blocks = [bitstring[i:i+L] for i in range(0, L * Q, L)]
-    T = [0] * Q
+    frequencies = []
+    for i in range(0, n, Q):
+        block = bitstring[i:i+Q]
+        ones_count = block.count('1')
+        frequencies.append(ones_count / Q)
 
-    for i in range(1, min(Q, len(blocks))):
-        seen = set()
-        for j in range(K):
-            idx = i + j * Q
-            if idx < len(blocks):
-                if blocks[idx] not in seen:
-                    T[i] += 1
-                    seen.add(blocks[idx])
-
-    v_obs = sum(T[1:]) / (Q - 1)
-    lambda_val = (v_obs - 0.7) * math.sqrt(Q + 1.4)
-
-    p_value = math.erfc(abs(lambda_val) / math.sqrt(2))
+    mean_frequency = sum(frequencies) / M
+    chi_square = sum([(freq - mean_frequency) ** 2 for freq in frequencies]) * M
+    p_value = erfc(chi_square / sqrt(2 * M))
 
     return p_value
 
@@ -101,24 +91,24 @@ if __name__ == "__main__":
 
         path1 = paths['path_input']
         path2 = paths['path_output']
-        L = paths.get('L')
-        Q = paths.get('Q')
 
         with open(path1, "r", encoding="utf-8") as sequences:
             sequence = json.load(sequences)
 
+        M = paths.get('M')
+        Q = paths.get('Q')
         cpp_sequence = sequence['cpp']
         java_sequence = sequence['java']
 
         with open(path2, 'w', encoding='utf-8') as out_file:
             out_file.write("Results (C++)\n")
             out_file.write("Serial Test: " + str(serial_test(cpp_sequence)) + '\n')
-            out_file.write("Maurer’s Universal Statistical Test: " + str(maurers_universal_statistical_test(cpp_sequence, L, Q)) + '\n')
+            out_file.write("Frequency Test within a Block: " + str(frequency_test_within_block(cpp_sequence, M, Q)) + '\n')
             out_file.write("Cumulative Sums Test: " + str(cumulative_sums_test(cpp_sequence)) + '\n\n')
 
             out_file.write("Results (Java)\n")
             out_file.write("Serial Test: " + str(serial_test(java_sequence)) + '\n')
-            out_file.write("Maurer’s Universal Statistical Test: " + str(maurers_universal_statistical_test(java_sequence, L, Q)) + '\n')
+            out_file.write("Frequency Test within a Block: " + str(frequency_test_within_block(java_sequence, M, Q)) + '\n')
             out_file.write("Cumulative Sums Test: " + str(cumulative_sums_test(java_sequence)) + '\n\n')
 
         logging.info("Tests completed successfully.")

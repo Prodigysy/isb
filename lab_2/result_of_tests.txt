@@ -1,10 +1,10 @@
 Results (C++)
-Serial Test: 0.6782154857504878
-Maurer’s Universal Statistical Test: 0.092749107576852
-Cumulative Sums Test: 0.962445510169988
+Serial Test: 0.9750671223720305
+frequency_test_within_block: 0.04547514418207774
+Cumulative Sums Test: 0.9839003640632236
 
 Results (Java)
-Serial Test: 0.6782154857504878
-Maurer’s Universal Statistical Test: 0.092749107576852
-Cumulative Sums Test: 0.962445510169988
+Serial Test: 0.8754584063098299
+frequency_test_within_block: 0.11088081494295468
+Cumulative Sums Test: 0.9865833585116158
 

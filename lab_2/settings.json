@@ -1,6 +1,7 @@
 {
-    "path_input":"lab_2/results.json",
-    "path_output":"lab_2/result_of_tests.txt",
-    "L": 4,
-    "Q": 30
+    "path_input": "lab_2/results.json",
+    "path_output": "lab_2/result_of_tests.txt",
+    "L": 8,
+    "Q": 16,
+    "M": 5
 }
