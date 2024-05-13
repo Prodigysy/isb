@@ -2,9 +2,12 @@ import json
 import logging
 import math
 import os
+
 from math import erfc, fabs, sqrt
 
+
 logging.basicConfig(level=logging.INFO)
+
 
 def serial_test(bitstring: str) -> float:
     """
@@ -29,6 +32,7 @@ def serial_test(bitstring: str) -> float:
     p_value = erfc(fabs(ones_sequence - zeros_sequence) / sqrt(2 * ones * zeros))
 
     return p_value
+
 
 def frequency_test_within_block(bitstring: str, M: int, Q: int) -> float:
     """
@@ -59,6 +63,7 @@ def frequency_test_within_block(bitstring: str, M: int, Q: int) -> float:
 
     return p_value
 
+
 def cumulative_sums_test(bitstring: str) -> float:
     """
     Performs the Cumulative Sums Test for the given bit sequence.
@@ -83,6 +88,7 @@ def cumulative_sums_test(bitstring: str) -> float:
     p_value = erfc(z / sqrt(N * (N + 1) * (2 * N + 1) / 6))
 
     return p_value
+
 
 if __name__ == "__main__":
     try:
