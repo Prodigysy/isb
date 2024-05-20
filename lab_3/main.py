@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout
 )
 
-from crypto_system import Cryptography  # Обновленный импорт
+from crypto_system import Cryptography  
 
 logging.basicConfig(level=logging.INFO)
 
