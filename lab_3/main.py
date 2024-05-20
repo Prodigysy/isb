@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout
 )
 
-import crypto as cp
+from crypto_system import Cryptography  # Обновленный импорт
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,14 +44,23 @@ class CryptoApp(QMainWindow):
         layout.addWidget(self.priv_key_edit)
 
         key_size_layout = QHBoxLayout()
-        self.key_size_label = QLabel("Выберите размер ключа:")
+        self.key_size_label = QLabel("Выберите размер ключа RSA:")
         self.key_size_combo = QComboBox()
-        self.key_size_combo.addItem("8")
-        self.key_size_combo.addItem("16")
-        self.key_size_combo.addItem("24")
+        self.key_size_combo.addItem("2048")
+        self.key_size_combo.addItem("4096")
         key_size_layout.addWidget(self.key_size_label)
         key_size_layout.addWidget(self.key_size_combo)
         layout.addLayout(key_size_layout)
+
+        sym_key_size_layout = QHBoxLayout()
+        self.sym_key_size_label = QLabel("Выберите размер симметричного ключа (бит):")
+        self.sym_key_size_combo = QComboBox()
+        self.sym_key_size_combo.addItem("64")
+        self.sym_key_size_combo.addItem("128")
+        self.sym_key_size_combo.addItem("192")
+        sym_key_size_layout.addWidget(self.sym_key_size_label)
+        sym_key_size_layout.addWidget(self.sym_key_size_combo)
+        layout.addLayout(sym_key_size_layout)
 
         self.generate_keys_button = QPushButton("Сгенерировать ключи")
         self.generate_keys_button.clicked.connect(self.generate_keys)
@@ -76,19 +85,21 @@ class CryptoApp(QMainWindow):
         self.cryptography = None
 
     def get_file_path(self, prompt):
-        """Prompt the user to enter a file path."""
-        options = QFileDialog.Options()
-        options |= QFileDialog.Option.ShowDirsOnly
-        file_path, _ = QFileDialog.getOpenFileName(self, prompt, "", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, prompt, "", "All Files (*)")
+        return file_path
+
+    def save_file_path(self, prompt):
+        file_path, _ = QFileDialog.getSaveFileName(self, prompt, "", "All Files (*)")
         return file_path
 
     def generate_keys(self):
-        symmetric_key_path = self.sym_key_edit.text()
-        public_key_path = self.pub_key_edit.text()
-        private_key_path = self.priv_key_edit.text()
-        key_size = int(self.key_size_combo.currentText())
+        symmetric_key_path = self.save_file_path("Укажите путь для сохранения симметричного ключа (symmetric)")
+        public_key_path = self.save_file_path("Укажите путь для сохранения публичного ключа (public)")
+        private_key_path = self.save_file_path("Укажите путь для сохранения приватного ключа (private)")
+        rsa_key_size = int(self.key_size_combo.currentText())
+        sym_key_size_bits = int(self.sym_key_size_combo.currentText())
 
-        self.cryptography = cp.Cryptography(symmetric_key_path, public_key_path, private_key_path, key_size)
+        self.cryptography = Cryptography(symmetric_key_path, public_key_path, private_key_path, rsa_key_size, sym_key_size_bits)
         try:
             self.cryptography.key_generation()
             QMessageBox.information(self, "Success", "Ключи успешно сгенерированы и сохранены.")
@@ -102,7 +113,7 @@ class CryptoApp(QMainWindow):
             return
 
         base_text_path = self.get_file_path("Укажите путь к файлу с исходным текстом")
-        encrypted_text_path, _ = QFileDialog.getSaveFileName(self, "Укажите путь для сохранения зашифрованного текста", "", "All Files (*)")
+        encrypted_text_path = self.save_file_path("Укажите путь для сохранения зашифрованного текста")
 
         try:
             self.cryptography.encryption(base_text_path, encrypted_text_path)
@@ -117,7 +128,7 @@ class CryptoApp(QMainWindow):
             return
 
         encrypted_text_path = self.get_file_path("Укажите путь к файлу с зашифрованным текстом")
-        decrypted_text_path, _ = QFileDialog.getSaveFileName(self, "Укажите путь для сохранения расшифрованного текста", "", "All Files (*)")
+        decrypted_text_path = self.save_file_path("Укажите путь для сохранения расшифрованного текста")
 
         try:
             self.cryptography.decryption(encrypted_text_path, decrypted_text_path)
@@ -126,12 +137,8 @@ class CryptoApp(QMainWindow):
             logging.error(f"Ошибка при расшифровании текста: {ex}")
             QMessageBox.critical(self, "Error", f"Ошибка при расшифровании текста: {ex}")
 
-
-def main():
-    app = QApplication(sys.argv)
-    crypto_app = CryptoApp()
-    crypto_app.show()
-    sys.exit(app.exec())
-
 if __name__ == "__main__":
-    main()
+    app = QApplication(sys.argv)
+    window = CryptoApp()
+    window.show()
+    sys.exit(app.exec())

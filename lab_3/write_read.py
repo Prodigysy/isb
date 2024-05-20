@@ -1,8 +1,6 @@
 import logging
 
-
 logging.basicConfig(level=logging.INFO)
-
 
 def write_data(path, data):
     """
