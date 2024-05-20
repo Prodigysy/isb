@@ -1,12 +1,10 @@
 import os
 import logging
-
 from cryptography.hazmat.primitives.asymmetric import rsa, padding as asym_padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding as sym_padding
 
-# Настройка логирования
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Cryptography:
@@ -39,7 +37,7 @@ class Cryptography:
             raise ValueError("Invalid symmetric key size. Choose 64, 128, or 192 bits.")
 
     def key_generation(self) -> None:
-        """Generates RSA public and private keys."""
+        """Generates RSA public and private keys and saves the keys."""
         # Save the private key
         private_key_pem = self.private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -96,6 +94,7 @@ class Cryptography:
         encrypted_symmetric_key = encrypted_data[:256]
         encrypted_text = encrypted_data[256:]
 
+        # Decrypt the encrypted symmetric key using the RSA private key
         symmetric_key = self.private_key.decrypt(
             encrypted_symmetric_key,
             asym_padding.OAEP(

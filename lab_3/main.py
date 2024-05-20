@@ -28,21 +28,6 @@ class CryptoApp(QMainWindow):
 
         layout = QVBoxLayout()
 
-        self.sym_key_label = QLabel("Путь для сохранения симметричного ключа (symmetric):")
-        self.sym_key_edit = QLineEdit()
-        layout.addWidget(self.sym_key_label)
-        layout.addWidget(self.sym_key_edit)
-
-        self.pub_key_label = QLabel("Путь для сохранения публичного ключа (public):")
-        self.pub_key_edit = QLineEdit()
-        layout.addWidget(self.pub_key_label)
-        layout.addWidget(self.pub_key_edit)
-
-        self.priv_key_label = QLabel("Путь для сохранения приватного ключа (private):")
-        self.priv_key_edit = QLineEdit()
-        layout.addWidget(self.priv_key_label)
-        layout.addWidget(self.priv_key_edit)
-
         key_size_layout = QHBoxLayout()
         self.key_size_label = QLabel("Выберите размер ключа RSA:")
         self.key_size_combo = QComboBox()
