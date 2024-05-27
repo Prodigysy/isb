@@ -11,23 +11,23 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 
 
 class Cryptography:
-    """Class of hybrid cryptosystem. Symmetric Triple DES encryption algorithm, Asymmetric RSA.
+    """Class of hybrid cryptosystem. Supports multiple symmetric encryption algorithms.
     Methods:
         1. key_generation(self) -> None
         2. encryption(self, text_file_path: str, encryption_file_path: str) -> None
         3. decryption(self, encryption_file_path: str, decryption_file_path: str) -> None
     """
 
-    def __init__(self, symmetric_key_path: str, public_key_path: str, private_key_path: str, rsa_key_size: int, sym_key_size_bits: int):
+    def __init__(self, symmetric_key_path: str, public_key_path: str, private_key_path: str, rsa_key_size: int, sym_key_size_bits: int, algorithm: str):
         self.symmetric_key_path = symmetric_key_path
         self.public_key_path = public_key_path
         self.private_key_path = private_key_path
-        self.rsa_key_size = rsa_key_size  
+        self.rsa_key_size = rsa_key_size
         self.sym_key_size_bits = sym_key_size_bits
         self.symmetric_key = None
         self.private_key = None
         self.public_key = None
-
+        self.algorithm = algorithm
 
     def generate_symmetric_key(self):
         """Generates a symmetric key of the specified size in bits."""
@@ -37,9 +37,10 @@ class Cryptography:
             return os.urandom(16)
         elif self.sym_key_size_bits == 192:
             return os.urandom(24)
+        elif self.sym_key_size_bits == 256:
+            return os.urandom(32)
         else:
-            raise ValueError("Invalid symmetric key size. Choose 64, 128, or 192 bits.")
-        
+            raise ValueError("Invalid symmetric key size. Choose 64, 128, 192, or 256 bits.")
 
     def key_generation(self) -> None:
         """Generates RSA public and private keys and a symmetric key."""
@@ -70,7 +71,6 @@ class Cryptography:
         except Exception as e:
             logging.error(f"Ошибка при генерации ключей: {e}")
 
-
     def encryption(self, text_file_path: str, encryption_file_path: str) -> None:
         """Encrypts a file using hybrid encryption."""
         try:
@@ -98,7 +98,6 @@ class Cryptography:
             logging.info(f"Data encrypted and saved to {encryption_file_path}")
         except Exception as e:
             logging.error(f"Ошибка при шифровании текста: {e}")
-
 
     def decryption(self, encryption_file_path: str, decryption_file_path: str) -> None:
         """Decrypts a file using hybrid encryption."""
@@ -130,23 +129,42 @@ class Cryptography:
         except Exception as e:
             logging.error(f"Ошибка при расшифровании текста: {e}")
 
-
     def _encrypt_decrypt(self, key, data, action):
         try:
-            cipher = Cipher(algorithms.TripleDES(key), modes.ECB())
+            if self.algorithm == "3DES":
+                cipher = Cipher(algorithms.TripleDES(key), modes.ECB())
+            elif self.algorithm == "Camellia":
+                cipher = Cipher(algorithms.Camellia(key), modes.ECB())
+            elif self.algorithm == "Blowfish":
+                cipher = Cipher(algorithms.Blowfish(key), modes.ECB())
+            elif self.algorithm == "ChaCha20":
+                nonce = os.urandom(16)  # nonce для ChaCha20
+                cipher = Cipher(algorithms.ChaCha20(key, nonce), mode=None)
+            else:
+                raise ValueError("Invalid encryption algorithm. Choose '3DES', 'Camellia', 'Blowfish', or 'ChaCha20'.")
+
             if action == 'encrypt':
                 encryptor = cipher.encryptor()
-                padder = sym_padding.PKCS7(algorithms.TripleDES.block_size).padder()
+                padder = sym_padding.PKCS7(cipher.algorithm.block_size).padder()
                 padded_data = padder.update(data) + padder.finalize()
                 encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
+                if self.algorithm == "ChaCha20":
+                    return nonce + encrypted_data
                 return encrypted_data
             elif action == 'decrypt':
                 decryptor = cipher.decryptor()
+                if self.algorithm == "ChaCha20":
+                    nonce = data[:16]
+                    data = data[16:]
+                    cipher = Cipher(algorithms.ChaCha20(key, nonce), mode=None)
+                    decryptor = cipher.decryptor()
                 decrypted_padded_data = decryptor.update(data) + decryptor.finalize()
-                unpadder = sym_padding.PKCS7(algorithms.TripleDES.block_size).unpadder()
+                unpadder = sym_padding.PKCS7(cipher.algorithm.block_size).unpadder()
                 decrypted_data = unpadder.update(decrypted_padded_data) + unpadder.finalize()
                 return decrypted_data
             else:
                 raise ValueError("Invalid action. Use 'encrypt' or 'decrypt'.")
         except Exception as e:
             logging.error(f"Ошибка при {action} данных: {e}")
+            raise
+

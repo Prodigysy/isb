@@ -17,13 +17,15 @@ from PyQt6.QtWidgets import (
 
 from crypto_system import Cryptography  
 
+
 logging.basicConfig(level=logging.INFO)
+
 
 class CryptoApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Система шифрования с помощью TripleDes")
+        self.setWindowTitle("Система шифрования")
         self.setGeometry(100, 100, 400, 300)
 
         layout = QVBoxLayout()
@@ -43,9 +45,21 @@ class CryptoApp(QMainWindow):
         self.sym_key_size_combo.addItem("64")
         self.sym_key_size_combo.addItem("128")
         self.sym_key_size_combo.addItem("192")
+        self.sym_key_size_combo.addItem("256")
         sym_key_size_layout.addWidget(self.sym_key_size_label)
         sym_key_size_layout.addWidget(self.sym_key_size_combo)
         layout.addLayout(sym_key_size_layout)
+
+        algorithm_layout = QHBoxLayout()
+        self.algorithm_label = QLabel("Выберите алгоритм шифрования:")
+        self.algorithm_combo = QComboBox()
+        self.algorithm_combo.addItem("3DES")
+        self.algorithm_combo.addItem("Camellia")
+        self.algorithm_combo.addItem("Blowfish")
+        self.algorithm_combo.addItem("ChaCha20")
+        algorithm_layout.addWidget(self.algorithm_label)
+        algorithm_layout.addWidget(self.algorithm_combo)
+        layout.addLayout(algorithm_layout)
 
         self.generate_keys_button = QPushButton("Сгенерировать ключи")
         self.generate_keys_button.clicked.connect(self.generate_keys)
@@ -83,8 +97,9 @@ class CryptoApp(QMainWindow):
         private_key_path = self.save_file_path("Укажите путь для сохранения приватного ключа (private)")
         rsa_key_size = int(self.key_size_combo.currentText())
         sym_key_size_bits = int(self.sym_key_size_combo.currentText())
+        algorithm = self.algorithm_combo.currentText()
 
-        self.cryptography = Cryptography(symmetric_key_path, public_key_path, private_key_path, rsa_key_size, sym_key_size_bits)
+        self.cryptography = Cryptography(symmetric_key_path, public_key_path, private_key_path, rsa_key_size, sym_key_size_bits, algorithm)
         try:
             self.cryptography.key_generation()
             QMessageBox.information(self, "Success", "Ключи успешно сгенерированы и сохранены.")

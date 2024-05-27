@@ -1,9 +1,12 @@
 import enum
 import logging
+
 from cryptography.hazmat.primitives import asymmetric, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
+
 logging.basicConfig(level=logging.INFO)
+
 
 class Action(enum.Enum):
     ENCRYPT = "encrypt"
