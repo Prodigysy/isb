@@ -1,170 +1,99 @@
-import os
 import logging
 
-from cryptography.hazmat.primitives import serialization, padding as sym_padding
-from cryptography.hazmat.primitives.asymmetric import rsa, padding as asym_padding
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from asymmetric_crypto import AsymmetricCrypto
+from symmetric_crypto import SymmetricCrypto
+
+import file_utils
 
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO)
 
 
-class Cryptography:
-    """Class of hybrid cryptosystem. Supports multiple symmetric encryption algorithms.
-    Methods:
-        1. key_generation(self) -> None
-        2. encryption(self, text_file_path: str, encryption_file_path: str) -> None
-        3. decryption(self, encryption_file_path: str, decryption_file_path: str) -> None
-    """
+class CryptographySystem:
+    def __init__(self, symmetric_key_path, public_key_path, private_key_path, rsa_key_size, sym_key_size_bits, algorithm):
+        """
+        Initialize the CryptographySystem class.
 
-    def __init__(self, symmetric_key_path: str, public_key_path: str, private_key_path: str, rsa_key_size: int, sym_key_size_bits: int, algorithm: str):
+        :param symmetric_key_path: Path to save the symmetric key.
+        :param public_key_path: Path to save the public key.
+        :param private_key_path: Path to save the private key.
+        :param rsa_key_size: Size of the RSA key in bits.
+        :param sym_key_size_bits: Size of the symmetric key in bits.
+        :param algorithm: Symmetric encryption algorithm to use.
+        """
         self.symmetric_key_path = symmetric_key_path
         self.public_key_path = public_key_path
         self.private_key_path = private_key_path
         self.rsa_key_size = rsa_key_size
         self.sym_key_size_bits = sym_key_size_bits
-        self.symmetric_key = None
-        self.private_key = None
-        self.public_key = None
         self.algorithm = algorithm
 
-    def generate_symmetric_key(self):
-        """Generates a symmetric key of the specified size in bits."""
-        if self.sym_key_size_bits == 64:
-            return os.urandom(8)
-        elif self.sym_key_size_bits == 128:
-            return os.urandom(16)
-        elif self.sym_key_size_bits == 192:
-            return os.urandom(24)
-        elif self.sym_key_size_bits == 256:
-            return os.urandom(32)
-        else:
-            raise ValueError("Invalid symmetric key size. Choose 64, 128, 192, or 256 bits.")
+        self.asymmetric_crypto = AsymmetricCrypto(rsa_key_size)
+        self.symmetric_crypto = SymmetricCrypto(sym_key_size_bits, algorithm)
 
-    def key_generation(self) -> None:
-        """Generates RSA public and private keys and a symmetric key."""
-        try:
-            self.symmetric_key = self.generate_symmetric_key()
-            self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=self.rsa_key_size)
-            self.public_key = self.private_key.public_key()
+    def key_generation(self):
+        """
+        Generate and save symmetric and asymmetric keys.
+        """
+        # Generate and save symmetric key
+        sym_key = self.symmetric_crypto.generate_key()
+        file_utils.save_key(sym_key, self.symmetric_key_path)
+        logging.info(f"Symmetric key saved to {self.symmetric_key_path}")
 
-            private_key_pem = self.private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-            with open(self.private_key_path, 'wb') as f:
-                f.write(private_key_pem)
+        # Generate and save RSA keys
+        private_key, public_key = self.asymmetric_crypto.generate_keys()
+        self.asymmetric_crypto.save_private_key(self.private_key_path)
+        self.asymmetric_crypto.save_public_key(self.public_key_path)
+        logging.info(f"Private key saved to {self.private_key_path}")
+        logging.info(f"Public key saved to {self.public_key_path}")
 
-            public_key_pem = self.public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
-            with open(self.public_key_path, 'wb') as f:
-                f.write(public_key_pem)
+    def encrypt_file(self, input_file_path, output_file_path):
+        """
+        Encrypt a file using both symmetric and asymmetric encryption.
 
-            with open(self.symmetric_key_path, 'wb') as f:
-                f.write(self.symmetric_key)
+        :param input_file_path: Path to the input file to be encrypted.
+        :param output_file_path: Path to save the encrypted file.
+        """
+        # Load data from input file
+        data = file_utils.load_file(input_file_path)
 
-            logging.info("RSA keys and symmetric key generated and saved.")
-        except Exception as e:
-            logging.error(f"Ошибка при генерации ключей: {e}")
+        # Encrypt data with symmetric key
+        encrypted_data = self.symmetric_crypto.encrypt(data)
 
-    def encryption(self, text_file_path: str, encryption_file_path: str) -> None:
-        """Encrypts a file using hybrid encryption."""
-        try:
-            with open(text_file_path, 'rb') as f:
-                plaintext = f.read()
-            logging.info(f"Data has been read from {text_file_path}")
+        # Load public key
+        self.asymmetric_crypto.load_public_key(self.public_key_path)
 
-            encrypted_symmetric_key = self.public_key.encrypt(
-                self.symmetric_key,
-                asym_padding.OAEP(
-                    mgf=asym_padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None
-                )
-            )
+        # Encrypt symmetric key with public key
+        encrypted_sym_key = self.asymmetric_crypto.encrypt(self.symmetric_crypto.key)
 
-            logging.debug(f"Encrypted symmetric key length: {len(encrypted_symmetric_key)}")
+        # Save encrypted symmetric key and encrypted data
+        with open(output_file_path, 'wb') as f:
+            f.write(encrypted_sym_key + b"|||" + encrypted_data)
+        logging.info(f"File encrypted and saved to {output_file_path}")
 
-            encrypted_text = self._encrypt_decrypt(self.symmetric_key, plaintext, 'encrypt')
+    def decrypt_file(self, input_file_path, output_file_path):
+        """
+        Decrypt a file using both symmetric and asymmetric decryption.
 
-            logging.debug(f"Encrypted text length: {len(encrypted_text)}")
+        :param input_file_path: Path to the encrypted input file.
+        :param output_file_path: Path to save the decrypted file.
+        """
+        # Load encrypted data from input file
+        with open(input_file_path, 'rb') as f:
+            encrypted_sym_key, encrypted_data = f.read().split(b"|||")
 
-            with open(encryption_file_path, 'wb') as f:
-                f.write(encrypted_symmetric_key + encrypted_text)
-            logging.info(f"Data encrypted and saved to {encryption_file_path}")
-        except Exception as e:
-            logging.error(f"Ошибка при шифровании текста: {e}")
+        # Load private key
+        self.asymmetric_crypto.load_private_key(self.private_key_path)
 
-    def decryption(self, encryption_file_path: str, decryption_file_path: str) -> None:
-        """Decrypts a file using hybrid encryption."""
-        try:
-            with open(encryption_file_path, 'rb') as f:
-                encrypted_data = f.read()
-            logging.info(f"Data has been read from {encryption_file_path}")
+        # Decrypt symmetric key with private key
+        decrypted_sym_key = self.asymmetric_crypto.decrypt(encrypted_sym_key)
 
-            encrypted_symmetric_key = encrypted_data[:self.rsa_key_size // 8]
-            encrypted_text = encrypted_data[self.rsa_key_size // 8:]
+        # Set the decrypted symmetric key
+        self.symmetric_crypto.key = decrypted_sym_key
 
-            logging.debug(f"Encrypted symmetric key length: {len(encrypted_symmetric_key)}")
-            logging.debug(f"Encrypted text length: {len(encrypted_text)}")
+        # Decrypt data with symmetric key
+        decrypted_data = self.symmetric_crypto.decrypt(encrypted_data)
 
-            symmetric_key = self.private_key.decrypt(
-                encrypted_symmetric_key,
-                asym_padding.OAEP(
-                    mgf=asym_padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None
-                )
-            )
-
-            decrypted_text = self._encrypt_decrypt(symmetric_key, encrypted_text, 'decrypt')
-
-            with open(decryption_file_path, 'wb') as f:
-                f.write(decrypted_text)
-            logging.info(f"File decrypted and saved to {decryption_file_path}")
-        except Exception as e:
-            logging.error(f"Ошибка при расшифровании текста: {e}")
-
-    def _encrypt_decrypt(self, key, data, action):
-        try:
-            if self.algorithm == "3DES":
-                cipher = Cipher(algorithms.TripleDES(key), modes.ECB())
-            elif self.algorithm == "Camellia":
-                cipher = Cipher(algorithms.Camellia(key), modes.ECB())
-            elif self.algorithm == "Blowfish":
-                cipher = Cipher(algorithms.Blowfish(key), modes.ECB())
-            elif self.algorithm == "ChaCha20":
-                nonce = os.urandom(16)  # nonce для ChaCha20
-                cipher = Cipher(algorithms.ChaCha20(key, nonce), mode=None)
-            else:
-                raise ValueError("Invalid encryption algorithm. Choose '3DES', 'Camellia', 'Blowfish', or 'ChaCha20'.")
-
-            if action == 'encrypt':
-                encryptor = cipher.encryptor()
-                padder = sym_padding.PKCS7(cipher.algorithm.block_size).padder()
-                padded_data = padder.update(data) + padder.finalize()
-                encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
-                if self.algorithm == "ChaCha20":
-                    return nonce + encrypted_data
-                return encrypted_data
-            elif action == 'decrypt':
-                decryptor = cipher.decryptor()
-                if self.algorithm == "ChaCha20":
-                    nonce = data[:16]
-                    data = data[16:]
-                    cipher = Cipher(algorithms.ChaCha20(key, nonce), mode=None)
-                    decryptor = cipher.decryptor()
-                decrypted_padded_data = decryptor.update(data) + decryptor.finalize()
-                unpadder = sym_padding.PKCS7(cipher.algorithm.block_size).unpadder()
-                decrypted_data = unpadder.update(decrypted_padded_data) + unpadder.finalize()
-                return decrypted_data
-            else:
-                raise ValueError("Invalid action. Use 'encrypt' or 'decrypt'.")
-        except Exception as e:
-            logging.error(f"Ошибка при {action} данных: {e}")
-            raise
-
+        # Save decrypted data to output file
+        file_utils.save_file(decrypted_data, output_file_path)
+        logging.info(f"File decrypted and saved to {output_file_path}")
