@@ -35,65 +35,89 @@ class CryptographySystem:
         """
         Generate and save symmetric and asymmetric keys.
         """
-        # Generate and save symmetric key
-        sym_key = self.symmetric_crypto.generate_key()
-        file_utils.save_key(sym_key, self.symmetric_key_path)
-        logging.info(f"Symmetric key saved to {self.symmetric_key_path}")
+        try:
+            # Generate and save symmetric key
+            sym_key = self.symmetric_crypto.generate_key()
+            file_utils.save_key(sym_key, self.symmetric_key_path)
+            logging.info(f"Symmetric key saved to {self.symmetric_key_path}")
 
-        # Generate and save RSA keys
-        private_key, public_key = self.asymmetric_crypto.generate_keys()
-        self.asymmetric_crypto.save_private_key(self.private_key_path)
-        self.asymmetric_crypto.save_public_key(self.public_key_path)
-        logging.info(f"Private key saved to {self.private_key_path}")
-        logging.info(f"Public key saved to {self.public_key_path}")
+            # Generate and save RSA keys
+            private_key, public_key = self.asymmetric_crypto.generate_keys()
+            self.asymmetric_crypto.save_private_key(self.private_key_path)
+            self.asymmetric_crypto.save_public_key(self.public_key_path)
+            logging.info(f"Private key saved to {self.private_key_path}")
+            logging.info(f"Public key saved to {self.public_key_path}")
+        except Exception as ex:
+            logging.error(f"Error during key generation: {ex}")
+            raise
 
-    def encrypt_file(self, input_file_path, output_file_path):
+    def encrypt_file(self, input_file_path, encrypted_data_path, encrypted_key_path):
         """
         Encrypt a file using both symmetric and asymmetric encryption.
 
         :param input_file_path: Path to the input file to be encrypted.
-        :param output_file_path: Path to save the encrypted file.
+        :param encrypted_data_path: Path to save the encrypted data.
+        :param encrypted_key_path: Path to save the encrypted symmetric key.
         """
-        # Load data from input file
-        data = file_utils.load_file(input_file_path)
+        try:
+            # Load data from input file
+            data = file_utils.load_file(input_file_path)
 
-        # Encrypt data with symmetric key
-        encrypted_data = self.symmetric_crypto.encrypt(data)
+            # Encrypt data with symmetric key
+            encrypted_data = self.symmetric_crypto.encrypt(data)
 
-        # Load public key
-        self.asymmetric_crypto.load_public_key(self.public_key_path)
+            # Load public key
+            self.asymmetric_crypto.load_public_key(self.public_key_path)
 
-        # Encrypt symmetric key with public key
-        encrypted_sym_key = self.asymmetric_crypto.encrypt(self.symmetric_crypto.key)
+            # Encrypt symmetric key with public key
+            encrypted_sym_key = self.asymmetric_crypto.encrypt(self.symmetric_crypto.key)
 
-        # Save encrypted symmetric key and encrypted data
-        with open(output_file_path, 'wb') as f:
-            f.write(encrypted_sym_key + b"|||" + encrypted_data)
-        logging.info(f"File encrypted and saved to {output_file_path}")
+            # Save encrypted data
+            with open(encrypted_data_path, 'wb') as f:
+                f.write(encrypted_data)
+            logging.info(f"Encrypted data saved to {encrypted_data_path}")
 
-    def decrypt_file(self, input_file_path, output_file_path):
+            # Save encrypted symmetric key
+            with open(encrypted_key_path, 'wb') as f:
+                f.write(encrypted_sym_key)
+            logging.info(f"Encrypted symmetric key saved to {encrypted_key_path}")
+
+        except Exception as ex:
+            logging.error(f"Error during file encryption: {ex}")
+            raise
+
+    def decrypt_file(self, encrypted_data_path, encrypted_key_path, output_file_path):
         """
         Decrypt a file using both symmetric and asymmetric decryption.
 
-        :param input_file_path: Path to the encrypted input file.
+        :param encrypted_data_path: Path to the encrypted data.
+        :param encrypted_key_path: Path to the encrypted symmetric key.
         :param output_file_path: Path to save the decrypted file.
         """
-        # Load encrypted data from input file
-        with open(input_file_path, 'rb') as f:
-            encrypted_sym_key, encrypted_data = f.read().split(b"|||")
+        try:
+            # Load encrypted data
+            encrypted_data = file_utils.load_file(encrypted_data_path)
 
-        # Load private key
-        self.asymmetric_crypto.load_private_key(self.private_key_path)
+            # Load encrypted symmetric key
+            with open(encrypted_key_path, 'rb') as f:
+                encrypted_sym_key = f.read()
 
-        # Decrypt symmetric key with private key
-        decrypted_sym_key = self.asymmetric_crypto.decrypt(encrypted_sym_key)
+            # Load private key
+            self.asymmetric_crypto.load_private_key(self.private_key_path)
 
-        # Set the decrypted symmetric key
-        self.symmetric_crypto.key = decrypted_sym_key
+            # Decrypt symmetric key with private key
+            decrypted_sym_key = self.asymmetric_crypto.decrypt(encrypted_sym_key)
 
-        # Decrypt data with symmetric key
-        decrypted_data = self.symmetric_crypto.decrypt(encrypted_data)
+            # Set the decrypted symmetric key
+            self.symmetric_crypto.key = decrypted_sym_key
 
-        # Save decrypted data to output file
-        file_utils.save_file(decrypted_data, output_file_path)
-        logging.info(f"File decrypted and saved to {output_file_path}")
+            # Decrypt data with symmetric key
+            decrypted_data = self.symmetric_crypto.decrypt(encrypted_data)
+
+            # Save decrypted data to output file
+            file_utils.save_file(decrypted_data, output_file_path)
+            logging.info(f"File decrypted and saved to {output_file_path}")
+
+        except Exception as ex:
+            logging.error(f"Error during file decryption: {ex}")
+            raise

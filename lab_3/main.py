@@ -1,5 +1,6 @@
 import sys
 import logging
+from typing import Optional
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QMessageBox, QComboBox, QFileDialog,
@@ -9,12 +10,13 @@ from PyQt6.QtWidgets import (
 from crypto_system import CryptographySystem
 from file_utils import load_key
 
-
 logging.basicConfig(level=logging.INFO)
 
-
 class CryptoApp(QMainWindow):
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Initialize the CryptoApp class.
+        """
         super().__init__()
 
         self.setWindowTitle("Система шифрования с помощью TripleDes")
@@ -37,6 +39,8 @@ class CryptoApp(QMainWindow):
         self.sym_key_size_combo.addItem("64")
         self.sym_key_size_combo.addItem("128")
         self.sym_key_size_combo.addItem("192")
+        self.sym_key_size_combo.addItem("256")
+        self.sym_key_size_combo.addItem("448")
         sym_key_size_layout.addWidget(self.sym_key_size_label)
         sym_key_size_layout.addWidget(self.sym_key_size_combo)
         layout.addLayout(sym_key_size_layout)
@@ -76,9 +80,9 @@ class CryptoApp(QMainWindow):
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
-        self.cryptography = None
+        self.cryptography: Optional[CryptographySystem] = None
 
-    def get_file_path(self, prompt):
+    def get_file_path(self, prompt: str) -> str:
         """
         Open a file dialog to select a file.
 
@@ -88,7 +92,7 @@ class CryptoApp(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(self, prompt, "", "All Files (*)")
         return file_path
 
-    def save_file_path(self, prompt):
+    def save_file_path(self, prompt: str) -> str:
         """
         Open a file dialog to save a file.
 
@@ -98,22 +102,22 @@ class CryptoApp(QMainWindow):
         file_path, _ = QFileDialog.getSaveFileName(self, prompt, "", "All Files (*)")
         return file_path
 
-    def load_keys(self):
+    def load_keys(self) -> None:
         """
         Load user-provided keys.
         """
-        symmetric_key_path = self.get_file_path("Выберите файл с симметричным ключом")
-        public_key_path = self.get_file_path("Выберите файл с публичным ключом")
-        private_key_path = self.get_file_path("Выберите файл с приватным ключом")
+        symmetric_key_path: str = self.get_file_path("Выберите файл с симметричным ключом")
+        public_key_path: str = self.get_file_path("Выберите файл с публичным ключом")
+        private_key_path: str = self.get_file_path("Выберите файл с приватным ключом")
 
         try:
-            symmetric_key = load_key(symmetric_key_path)
-            public_key = load_key(public_key_path)
-            private_key = load_key(private_key_path)
+            symmetric_key: bytes = load_key(symmetric_key_path)
+            public_key: bytes = load_key(public_key_path)
+            private_key: bytes = load_key(private_key_path)
 
-            rsa_key_size = int(self.key_size_combo.currentText())
-            sym_key_size = int(self.sym_key_size_combo.currentText())
-            algorithm = self.algorithm_combo.currentText()
+            rsa_key_size: int = int(self.key_size_combo.currentText())
+            sym_key_size: int = int(self.sym_key_size_combo.currentText())
+            algorithm: str = self.algorithm_combo.currentText()
 
             self.cryptography = CryptographySystem(symmetric_key, public_key, private_key, rsa_key_size,
                                                    sym_key_size, algorithm)
@@ -122,33 +126,43 @@ class CryptoApp(QMainWindow):
             logging.error(f"Ошибка при загрузке пользовательских ключей: {ex}")
             QMessageBox.critical(self, "Error", f"Ошибка при загрузке пользовательских ключей: {ex}")
 
-    def generate_keys(self):
+    def generate_keys(self) -> None:
         """
         Generate cryptographic keys.
         """
-        rsa_key_size = int(self.key_size_combo.currentText())
-        sym_key_size = int(self.sym_key_size_combo.currentText())
-        if rsa_key_size == 2048 and sym_key_size == 64:
-            QMessageBox.critical(self, "Ошибка", "Нельзя использовать алгоритм ChaCha20 с ключом 64 бит.")
+        rsa_key_size: int = int(self.key_size_combo.currentText())
+        sym_key_size: int = int(self.sym_key_size_combo.currentText())
+        algorithm: str = self.algorithm_combo.currentText()
+
+        # Define valid key sizes for each algorithm
+        valid_key_sizes = {
+            "3DES": [64, 128, 192],
+            "Camellia": [128, 192, 256],
+            "Blowfish": [32, 64, 128, 192, 256, 448],
+            "ChaCha20": [256],
+        }
+
+        # Check if the selected key size is valid for the chosen algorithm
+        if sym_key_size not in valid_key_sizes.get(algorithm, []):
+            QMessageBox.critical(self, "Ошибка", f"Неправильный размер ключа для алгоритма {algorithm}.")
             return
-        else:
-            symmetric_key_path = self.save_file_path("Укажите путь для сохранения симметричного ключа (symmetric)")
-            public_key_path = self.save_file_path("Укажите путь для сохранения публичного ключа (public)")
-            private_key_path = self.save_file_path("Укажите путь для сохранения приватного ключа (private)")
 
-            self.cryptography = CryptographySystem(
-                symmetric_key_path, public_key_path, private_key_path, rsa_key_size,
-                sym_key_size, "Blowfish"  # Здесь можно передать любой алгоритм, кроме ChaCha20
-            )
-            try:
-                self.cryptography.key_generation()
-                QMessageBox.information(self, "Success", "Ключи успешно сгенерированы и сохранены.")
-            except Exception as ex:
-                logging.error(f"Ошибка при генерации ключей: {ex}")
-                QMessageBox.critical(self, "Error", f"Ошибка при генерации ключей: {ex}")
+        symmetric_key_path: str = self.save_file_path("Укажите путь для сохранения симметричного ключа (symmetric)")
+        public_key_path: str = self.save_file_path("Укажите путь для сохранения публичного ключа (public)")
+        private_key_path: str = self.save_file_path("Укажите путь для сохранения приватного ключа (private)")
 
+        self.cryptography = CryptographySystem(
+            symmetric_key_path, public_key_path, private_key_path, rsa_key_size,
+            sym_key_size, algorithm
+        )
+        try:
+            self.cryptography.key_generation()
+            QMessageBox.information(self, "Success", "Ключи успешно сгенерированы и сохранены.")
+        except Exception as ex:
+            logging.error(f"Ошибка при генерации ключей: {ex}")
+            QMessageBox.critical(self, "Error", f"Ошибка при генерации ключей: {ex}")
 
-    def encrypt_text(self):
+    def encrypt_text(self) -> None:
         """
         Encrypt the text file using the generated keys.
         """
@@ -156,17 +170,17 @@ class CryptoApp(QMainWindow):
             QMessageBox.warning(self, "Warning", "Сначала сгенерируйте ключи!")
             return
 
-        base_text_path = self.get_file_path("Укажите путь к файлу с исходным текстом")
-        encrypted_text_path = self.save_file_path("Укажите путь для сохранения зашифрованного текста")
+        base_text_path: str = self.get_file_path("Укажите путь к файлу с исходным текстом")
+        encrypted_text_path: str = self.save_file_path("Укажите путь для сохранения зашифрованного текста")
 
         try:
-            self.cryptography.encryption(base_text_path, encrypted_text_path)
+            self.cryptography.encrypt_file(base_text_path, encrypted_text_path)
             QMessageBox.information(self, "Success", "Текст успешно зашифрован.")
         except Exception as ex:
             logging.error(f"Ошибка при шифрованиании текста: {ex}")
             QMessageBox.critical(self, "Error", f"Ошибка при шифровании текста: {ex}")
 
-    def decrypt_text(self):
+    def decrypt_text(self) -> None:
         """
         Decrypt the text file using the generated keys.
         """
@@ -174,15 +188,16 @@ class CryptoApp(QMainWindow):
             QMessageBox.warning(self, "Warning", "Сначала сгенерируйте ключи!")
             return
 
-        encrypted_text_path = self.get_file_path("Укажите путь к файлу с зашифрованным текстом")
-        decrypted_text_path = self.save_file_path("Укажите путь для сохранения расшифрованного текста")
+        encrypted_text_path: str = self.get_file_path("Укажите путь к файлу с зашифрованным текстом")
+        decrypted_text_path: str = self.save_file_path("Укажите путь для сохранения расшифрованного текста")
 
         try:
-            self.cryptography.decryption(encrypted_text_path, decrypted_text_path)
+            self.cryptography.decrypt_file(encrypted_text_path, decrypted_text_path)
             QMessageBox.information(self, "Success", "Текст успешно расшифрован.")
         except Exception as ex:
             logging.error(f"Ошибка при расшифровании текста: {ex}")
             QMessageBox.critical(self, "Error", f"Ошибка при расшифровании текста: {ex}")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
